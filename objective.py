@@ -15,7 +15,7 @@ class Objective(BaseObjective):
     parameters = {
         'reg': [0.5],
         'delta': [0.9],
-        'data_fit': ['quad', 'huber']
+        'data_fit': ['quad']
     }
 
     def set_data(self, A, y, x):
