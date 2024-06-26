@@ -3,7 +3,6 @@ from benchopt import BaseDataset, safe_import_context
 with safe_import_context() as import_ctx:
     import deepinv as dinv
     import torch
-    import numpy as np
 
 
 class Dataset(BaseDataset):
@@ -16,10 +15,14 @@ class Dataset(BaseDataset):
     }
 
     def get_data(self):
-        device = dinv.utils.get_freer_gpu() if torch.cuda.is_available() else "cpu"
+        if torch.cuda.is_available():
+            device = dinv.utils.get_freer_gpu()
+        else:
+            device = 'cpu'
 
         url = (
-            "https://culturezvous.com/wp-content/uploads/2017/10/chateau-azay-le-rideau.jpg?download=true"
+            "https://culturezvous.com/wp-content/uploads/2017/10/"
+            "chateau-azay-le-rideau.jpg?download=true"
         )
         x = dinv.utils.load_url_image(url=url, img_size=100).to(device)
         tensor_size = x.shape[1:]
@@ -30,8 +33,6 @@ class Dataset(BaseDataset):
         )
         physics.noise_model = dinv.physics.GaussianNoise(sigma=0.2)
 
-        A = np.diag(100*[0.5]) #Inpainting Matrix
-
         y = operator(x)
 
-        return dict(A=A.numpy(), y=y.numpy(), x=x.numpy())
+        return dict(A=0, y=y.numpy(), x=x.numpy())

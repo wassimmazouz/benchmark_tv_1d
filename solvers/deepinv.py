@@ -15,14 +15,24 @@ class Solver(BaseSolver):
         'max_iter': [50]
     }
 
+    def skip(self, A, reg, y, c, delta, data_fit):
+        if data_fit == 'huber':
+            return True, "solver does not work with huber loss"
+        return False, None
+
     def set_objective(self, A, reg, y, c, delta, data_fit):
-        self.A, self.reg, self.y, self.c, self.deta, self.data_fit = A, reg, torch.from_numpy(y), c, delta, data_fit
+        self.A, self.reg, self.y = A, reg, torch.from_numpy(y)
+        self.c, self.deta, self.data_fit = c, delta, data_fit
 
     def run(self, n_iter):
-        device = dinv.utils.get_freer_gpu() if torch.cuda.is_available() else "cpu"
-        x, y = self.x, self.y
+        if torch.cuda.is_available():
+            device = dinv.utils.get_freer_gpu()
+        else:
+            device = 'cpu'
+
+        y = self.y
         gamma, reg = self.gamma, self.reg
-        x2 = x.clone().to(device)
+        x = y.clone().to(device)
         data_fidelity = L2()
         prior = dinv.optim.TVPrior()
 
@@ -30,12 +40,12 @@ class Solver(BaseSolver):
             tensor_size=x.shape[1:],
             mask=0.5,
             device=device
-            )
+        )
         physics.noise_model = dinv.physics.GaussianNoise(sigma=0.2)
         for _ in range(50):
-            x2 = x2 - gamma*data_fidelity.grad(x2, y, physics)
-            x2 = prior.prox(x2,  gamma=gamma*reg)
-        self.out = x2.clone()
+            x = x - gamma*data_fidelity.grad(x, y, physics)
+            x = prior.prox(x,  gamma=gamma*reg)
+        self.out = x.clone()
 
     def get_result(self):
-        return dict(x=self.out)
+        return dict(x=self.out.numpy())
