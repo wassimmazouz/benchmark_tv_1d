@@ -21,7 +21,8 @@ class Objective(BaseObjective):
         'data_fit': ['quad', 'huber']
     }
 
-    def linop(self, x):
+    def linop(self, x2):
+        x = torch.from_numpy(x2)
         if torch.cuda.is_available():
             device = dinv.utils.get_freer_gpu()
         else:
@@ -32,8 +33,8 @@ class Objective(BaseObjective):
             mask=0.5,
             device=device
         )
-        physics.noise_model = dinv.physics.UniformNoise(a=0)
-        return physics(x)
+        physics.noise_model = dinv.physics.UniformNoise(a=0.1)
+        return physics(x).numpy()
 
     def set_data(self, A, y, x):
         self.A, self.y, self.x = A, y, x
@@ -97,13 +98,13 @@ class Objective(BaseObjective):
                 device = 'cpu'
 
             physics = dinv.physics.Inpainting(
-                tensor_size=u.shape[1:],
+                tensor_size=torch.from_numpy(u).shape[1:],
                 mask=0.5,
                 device=device
             )
             physics.noise_model = dinv.physics.UniformNoise(a=0)
             data_fidelity = L1()
-            return data_fidelity.grad(self.linop(u), self.y, physics)
+            return data_fidelity.grad(self.linop(u), self.y, physics).numpy()
         R = self.y - A @ u
         if self.data_fit == 'quad':
             return - A.T @ R
